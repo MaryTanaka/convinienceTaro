@@ -3,16 +3,21 @@ import random
 from discord.ext import commands
 from discord.ext import tasks
 from datetime import datetime, timedelta, timezone
+import asyncio
+import os
+import subprocess
+import ffmpeg
+from voice_generator import creat_WAV
 
 bot = commands.Bot(command_prefix='/')
-ID_BOT = xxxxxxxxxxx #BotのID
-TOKEN = 'xxxxxxxxxxx' #TOKEN
+ID_BOT = 708836631519690784 #BotのID
+TOKEN = 'NzA4ODM2NjMxNTE5NjkwNzg0.XrdJ4w.sbJfGgx8IgDCajHshP5qnGlrrls' #TOKEN
 
-GUILD_ID = xxxxxxxxxxxx #鯖のID
-ID_CHANNEL_VC = xxxxxxxxxxxx #VCのチャンネル
+GUILD_ID = 602886213686395044 #鯖のID
+ID_CHANNEL_VC = 721590762147414116 #VCのチャンネル
 
-ID_CHANNEL = xxxxxxxxxxxx #マルチ募集時の投稿チャンネルID
-REACTION_PART = 'xxxxxxxxxxx' #狩る側で参加したい人のリアクション
+ID_CHANNEL = 710122109711417385 #マルチ募集時の投稿チャンネルID
+REACTION_PART = '<:dappou:613239014304251921>' #狩る側で参加したい人のリアクション
 REACTION_MUST = '✅'
 
 OFFER_TIME = '22:50' #募集時刻
@@ -21,6 +26,8 @@ participation = []
 must_participation = []
 
 bot.remove_command('help')
+voice_client = None
+#callChannelID = None
 
 @bot.event
 async def on_ready():
@@ -35,7 +42,9 @@ async def help(ctx):
         return
 
     embed = discord.Embed(title="便利太郎の使い方", description="便利太郎の使い方は以下の通りです.", color=0xeee657)
-   
+
+    embed.add_field(name="/join", value="VCに便利太郎を召喚するコマンド．\nテキストチャンネルへの投稿を読み上げますが、現状絵文字は読み上げません．", inline=False)
+    embed.add_field(name="/bye", value="VCから便利太郎を帰らせるコマンド.", inline=False)   
     embed.add_field(name="/ult", value="任意のタイミングでアルバハ募集をかけるコマンド.\nアルバハは22:50に定期募集されます.", inline=False)
     embed.add_field(name="/pick N", value="自動でN人組を選出し、待機組を別途表示します.\n2組以上作成可能な場合は可能な限り作成します.", inline=False)
     embed.add_field(name="/ls", value="現在参加表明している人のリストをDiscord上に表示します.", inline=False)
@@ -147,6 +156,18 @@ async def pick(ctx, arg):
     pickup_str += sub_str
 
     await ctx.send(pickup_str)
+
+@bot.command()
+async def join(ctx):
+    await ctx.send('おはよう')
+    vc = ctx.author.voice.channel
+    #callChannelID = ctx.message.channel.id
+    await vc.connect()
+
+@bot.command()
+async def bye(ctx):
+    await ctx.send('おやすみ')
+    await ctx.voice_client.disconnect()
 
 @bot.command()
 async def ult(ctx):
@@ -276,6 +297,22 @@ async def on_reaction_remove(reaction, user):
     print('\nMust_Participation: ')
     print(must_participation)
 
+
+@bot.event
+async def on_message(message):
+    msgclient = message.guild.voice_client
+    if message.content.startswith('/'):
+        pass
+    else:
+        if message.guild.voice_client:
+            print(message.content)
+            creat_WAV(message.content)
+            source = discord.FFmpegPCMAudio("open_jtalk.wav")
+            message.guild.voice_client.play(source)
+        else:
+            pass
+    await bot.process_commands(message)
+
 @bot.event
 async def on_voice_state_update(member, before, after):
     channel = bot.get_channel(ID_CHANNEL_VC)
@@ -286,6 +323,7 @@ async def on_voice_state_update(member, before, after):
             msg = await channel.send(member.name + "が退室しました.")     
         else:
             msg = await channel.send(member.name + "が [ " + before.channel.name + " ] から [ " + after.channel.name + " ]に移動しました.")  
+
 
 loop.start()
 bot.run(TOKEN)
